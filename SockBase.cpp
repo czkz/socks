@@ -3,32 +3,32 @@
 
 SockHandle::SockHandle(SockHandle&& other) {
     this->value = other.value;
-    other.value = SockDefines::null_socket;
+    other.value = SockPlatform::null_socket;
 }
 
 SockHandle& SockHandle::operator=(SockHandle&& other) {
     this->value = other.value;
-    other.value = SockDefines::null_socket;
+    other.value = SockPlatform::null_socket;
     return *this;
 }
 
 SockHandle::SockHandle(int af, int type, int protocol) {
     this->value = socket(af, type, protocol);
-    if (this->value == SockDefines::null_socket) {
-        throw SockError("Socks socket() failed", &socket, SockDefines::get_errno());
+    if (this->value == SockPlatform::null_socket) {
+        throw SockError("Socks socket() failed", &socket, SockPlatform::get_errno());
     }
     FD_ZERO(&thisSet);
 }
 
-SockHandle::SockHandle(SockDefines::socket_t&& socket) {
+SockHandle::SockHandle(SockPlatform::socket_t&& socket) {
     this->value = socket;
-    socket = SockDefines::null_socket;
+    socket = SockPlatform::null_socket;
     FD_ZERO(&thisSet);
 }
 
 SockHandle::~SockHandle() {
-    if (this->value != SockDefines::null_socket) {
-        SockDefines::close_fn(this->value);
+    if (this->value != SockPlatform::null_socket) {
+        SockPlatform::close_fn(this->value);
     }
 }
 
@@ -36,8 +36,8 @@ bool SockHandle::Readable() {
     static constexpr timeval tv = {0, 0};
     FD_SET(this->value, &thisSet);
     int ret = select(0, &thisSet, 0, 0, const_cast<timeval*>(&tv));
-    if (ret == SockDefines::null_socket) {
-        throw SockError("Socks select() failed", &select, SockDefines::get_errno());
+    if (ret == SockPlatform::null_socket) {
+        throw SockError("Socks select() failed", &select, SockPlatform::get_errno());
     } else {
         return ret;
     }
@@ -47,11 +47,11 @@ bool SockHandle::Readable() {
 
 std::string Host::GetHostname() const {
     if (!hostInfo) { return ""; }
-    SockDefines::hostent_t* hst = gethostbyaddr ((const char*) &hostInfo->sin_addr.s_addr,
+    SockPlatform::hostent_t* hst = gethostbyaddr ((const char*) &hostInfo->sin_addr.s_addr,
                                                  4, AF_INET);
     if (hst == nullptr) {
         throw SockError("Sock Host gethostbyaddr() error",
-                        &gethostbyaddr, SockDefines::get_errno());
+                        &gethostbyaddr, SockPlatform::get_errno());
     }
     return hst->h_name;
 }
@@ -78,11 +78,11 @@ std::optional<sockaddr_in> Host::getSockaddr(const char* host, uint16_t port) {
     if (asIP != INADDR_NONE) {
         hostInfo.sin_addr.s_addr = asIP;
     } else {
-        SockDefines::hostent_t* h;
+        SockPlatform::hostent_t* h;
         h = gethostbyname(host);
         if (h == nullptr) {
-            int err = SockDefines::get_errno();
-            if (err == SockDefines::error_codes::no_data) {
+            int err = SockPlatform::get_errno();
+            if (err == SockPlatform::error_codes::no_data) {
                 return std::nullopt;
             } else {
                 throw SockError("Sock failed to interpret host address", &gethostbyname, err);

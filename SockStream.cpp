@@ -1,19 +1,19 @@
 #include "SockStream.h"
 
 void SockStreamBase::Disconnect() const {
-    shutdown(sock.value, SockDefines::shutdown_how::read);
+    shutdown(sock.value, SockPlatform::shutdown_how::read);
 }
 
 void SockConnection::Send(const void* data, int dataSize) const {
     const int res = send(sock.value, (const char*) data, dataSize, 0);
     if (res == -1) {
-        int err = SockDefines::get_errno();
+        int err = SockPlatform::get_errno();
         switch (err) {
-        case SockDefines::error_codes::ewouldblock:
+        case SockPlatform::error_codes::ewouldblock:
             return;
-        case SockDefines::error_codes::ehostunreach:
-        case SockDefines::error_codes::econnreset:
-        case SockDefines::error_codes::etimedout:
+        case SockPlatform::error_codes::ehostunreach:
+        case SockPlatform::error_codes::econnreset:
+        case SockPlatform::error_codes::etimedout:
             throw SockDisconnect(&send, err);
         default:
             throw SockError("Sock send() failed", &send, err);
@@ -26,13 +26,13 @@ int SockConnection::ReceiveBase(void* buffer, int bufferLength, bool shouldFill)
     if (res == 0) {
         throw SockGracefulDisconnect(*this);
     } else if (res < 0) {
-        int err = SockDefines::get_errno();
+        int err = SockPlatform::get_errno();
         switch (err) {
-        case SockDefines::error_codes::ewouldblock:
+        case SockPlatform::error_codes::ewouldblock:
             return 0;
-        case SockDefines::error_codes::enetreset:
-        case SockDefines::error_codes::etimedout:
-        case SockDefines::error_codes::econnreset:
+        case SockPlatform::error_codes::enetreset:
+        case SockPlatform::error_codes::etimedout:
+        case SockPlatform::error_codes::econnreset:
             throw SockDisconnect(&recv, err);
         default:
             throw SockError("Sock recv() failed", &recv, err);
@@ -98,11 +98,11 @@ bool SockClient::Connect(const char* host, uint16_t port) {
     if (!m_host.hostInfo) { return false; }
 
     if (connect(sock.value, (sockaddr*) &m_host.hostInfo.value(), sizeof(sockaddr_in)) != 0) {
-        int err = SockDefines::get_errno();
+        int err = SockPlatform::get_errno();
         switch (err) {
-        case SockDefines::error_codes::econnrefused:
-        case SockDefines::error_codes::enetunreach:
-        case SockDefines::error_codes::etimedout:
+        case SockPlatform::error_codes::econnrefused:
+        case SockPlatform::error_codes::enetunreach:
+        case SockPlatform::error_codes::etimedout:
             return false;
         }
         throw SockError("Sock connect() error", &connect, err);
@@ -118,21 +118,21 @@ void SockServer::Start(uint16_t port, int backlog) {
     hostInfo.sin_port = htons (port);
 
     if (bind(sock.value, (sockaddr*) &hostInfo, sizeof hostInfo)) {
-        throw SockError("Sock bind() error", &bind, SockDefines::get_errno());
+        throw SockError("Sock bind() error", &bind, SockPlatform::get_errno());
     }
     if (listen(sock.value, backlog)) {
-        throw SockError("Sock listen() error", &listen, SockDefines::get_errno());
+        throw SockError("Sock listen() error", &listen, SockPlatform::get_errno());
     }
 }
 
 ConnectedClient SockServer::Accept() {
-    SockDefines::socket_t client_socket;
+    SockPlatform::socket_t client_socket;
     sockaddr_in clientInfo;
-    SockDefines::sockaddr_len_t client_addr_size = sizeof(clientInfo);
+    SockPlatform::sockaddr_len_t client_addr_size = sizeof(clientInfo);
 
     client_socket = accept(sock.value, (sockaddr*) &clientInfo, &client_addr_size);
-    if (client_socket == SockDefines::null_socket) {
-        throw SockError("Sock accept() error", &accept, SockDefines::get_errno());
+    if (client_socket == SockPlatform::null_socket) {
+        throw SockError("Sock accept() error", &accept, SockPlatform::get_errno());
     }
     return ConnectedClient(std::move(client_socket), clientInfo);
 }

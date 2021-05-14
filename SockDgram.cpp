@@ -4,7 +4,7 @@ void SockDgram::Send(const std::string& data, const Host& host) {
     if (!host.hostInfo) { return; }
     int ret = sendto(sock.value, data.data(), data.size(), 0, (const sockaddr*) &host.hostInfo.value(), sizeof(sockaddr_in));
     if (ret == -1) {
-        throw SockError("Sock sendto() error", &sendto, SockDefines::get_errno());
+        throw SockError("Sock sendto() error", &sendto, SockPlatform::get_errno());
     }
 }
 
@@ -15,7 +15,7 @@ void SockDgram::Bind(uint16_t port) {
     hostInfo.sin_port = htons(port);
 
     if (bind(sock.value, (sockaddr*) &hostInfo, sizeof hostInfo) == -1) {
-        throw SockError("Sock bind() error", &bind, SockDefines::get_errno());
+        throw SockError("Sock bind() error", &bind, SockPlatform::get_errno());
     }
 }
 
@@ -24,12 +24,12 @@ Packet SockDgram::Receive() {
     char buf[buflen];
 
     sockaddr_in hostInfo;
-    SockDefines::sockaddr_len_t hostInfoLen = sizeof hostInfo;
+    SockPlatform::sockaddr_len_t hostInfoLen = sizeof hostInfo;
 
     int recvlen = recvfrom(sock.value, buf, buflen, 0, (sockaddr*) &hostInfo, &hostInfoLen);
     if (recvlen == -1) {
-        int err = SockDefines::get_errno();
-        if (err == SockDefines::error_codes::econnreset) {
+        int err = SockPlatform::get_errno();
+        if (err == SockPlatform::error_codes::econnreset) {
             return Packet{std::nullopt, Host{hostInfo}};
         }
         else {
@@ -45,7 +45,7 @@ void SockDgramConn::Connect(const Host& host) {
     if (!host.hostInfo) { return; }
     int ret = connect(sock.value, (const sockaddr*) &host.hostInfo.value(), sizeof(host.hostInfo.value()));
     if (ret == -1) {
-        throw SockError("Sock connect() error", &connect, SockDefines::get_errno());
+        throw SockError("Sock connect() error", &connect, SockPlatform::get_errno());
     }
 }
 
@@ -53,7 +53,7 @@ void SockDgramConn::Send(const std::string& data)
 {
     int ret = send(sock.value, data.data(), data.size(), 0);
     if (ret == -1) {
-        throw SockError("Sock send() error", &send, SockDefines::get_errno());
+        throw SockError("Sock send() error", &send, SockPlatform::get_errno());
     }
 }
 
@@ -64,8 +64,8 @@ std::optional<std::string> SockDgramConn::Receive()
 
     int recvlen = recv(sock.value, buf, buflen, 0);
     if (recvlen == -1) {
-        int err = SockDefines::get_errno();
-        if (err == SockDefines::error_codes::econnreset) {
+        int err = SockPlatform::get_errno();
+        if (err == SockPlatform::error_codes::econnreset) {
             return std::nullopt;
         }
         else {

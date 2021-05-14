@@ -8,7 +8,7 @@ protected:
 
 protected:
     SockStreamBase() : sock(AF_INET, SOCK_STREAM, IPPROTO_TCP) { }
-    SockStreamBase(SockDefines::socket_t&& sock) : sock(std::move(sock)) { }
+    SockStreamBase(SockPlatform::socket_t&& sock) : sock(std::move(sock)) { }
 
 public:
     ///Initialize graceful disconnect sequence.
@@ -65,7 +65,7 @@ class ConnectedClient : public SockConnection {
 public:
     Host host;
 protected:
-    ConnectedClient(SockDefines::socket_t&& in_sock, const sockaddr_in& clientHostInfo)
+    ConnectedClient(SockPlatform::socket_t&& in_sock, const sockaddr_in& clientHostInfo)
         : SockConnection(std::move(in_sock)), host(clientHostInfo) { }
     friend class SockServer;
 };
