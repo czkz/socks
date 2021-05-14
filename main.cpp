@@ -6,17 +6,16 @@ void clientThread() {
     SockClient client;
     client.Connect("127.0.0.1", 5555);
     client.Send("Hello");
-    std::string s = client.Receive();
-    std::cout << "Got from server: " << s << '\n';
+    // std::string s = client.Receive();
+    // std::cout << "Got from server: " << s << '\n';
 }
 
 void serverThread() {
     SockServer server;
     server.Start(5555);
     ConnectedClient client = server.Accept();
-    std::string s = client.Receive();
-    std::cout << "Got from client: " << s << '\n';
-    client.Send("World");
+    std::cout << "Got from client: " << client.Receive(6) << '\n';
+    // client.Send("World");
 }
 
 int main() {

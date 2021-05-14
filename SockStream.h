@@ -24,11 +24,11 @@ protected:
 
     ///@return Bytes received
     ///@param shouldFill Whether to wait for the buffer to fill up completely
-    int ReceiveBase(void* buffer, int bufferLength, bool shouldFill);
+    int receiveBase(void* buffer, int bufferLength, bool shouldFill);
 
     ///@param n Amount of bytes to receive
-    std::string ReceiveString(size_t);
-    std::string ReceiveString();
+    std::string receiveString(size_t);
+    std::string receiveString();
 
 public:
     void Send(const void* data, int dataLength) const;
@@ -39,20 +39,20 @@ public:
 
     ///Receives exactly bufferLength bytes from the socket
     ///@return Bytes received, greater than zero
-    inline int Receive(void* buffer, int bufferLength) { return ReceiveBase(buffer, bufferLength, true); }
+    // int Receive(void* buffer, int bufferLength);
 
     ///Receives exactly bufferLength bytes from the socket<br>
     ///Returns 0 instead of throwing SockGracefulDisconnect
-    int ReceiveNX(void* buffer, int bufferLength);
+    // int ReceiveNX(void* buffer, int bufferLength);
 
-    inline std::string Receive() { return ReceiveString(); }
-    inline std::string Receive(size_t n) { return ReceiveString(n); }
+    inline std::string Receive() { return receiveString(); }
+    inline std::string Receive(size_t n) { return receiveString(n); }
 
     ///Returns an empty string instead of throwing SockGracefulDisconnect
-    std::string ReceiveNX();
+    // std::string ReceiveNX();
 
     ///Disconnect and receive remaining data
-    std::string DisconnectGet();
+    // std::string DisconnectGet();
 
     inline bool HasData() { return sock.Readable(); }
 };
@@ -88,10 +88,4 @@ public:
     explicit SockDisconnect(Func func, int wsaerror) : SockError("Lost connection to remote host", func, wsaerror) { }
 protected:
     using SockError::SockError;
-};
-
-class SockGracefulDisconnect : public SockDisconnect {
-public:
-    const SockConnection& sock;
-    explicit SockGracefulDisconnect(const SockConnection& sock) : SockDisconnect("Remote host disconnected", &recv, 0), sock(sock) { }
 };

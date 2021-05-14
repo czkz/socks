@@ -22,10 +22,19 @@ void SockConnection::Send(const void* data, int dataSize) const {
     }
 }
 
-int SockConnection::ReceiveBase(void* buffer, int bufferLength, bool shouldFill) {
+
+// int SockConnection::Receive(void* buffer, int bufferLength) {
+//     int ret = ReceiveBase(buffer, bufferLength, true);
+//     if (ret == -1) {
+//         throw SockDisconnect("Remote host disconnected", &recv, 0);
+//     }
+//     return ret;
+// }
+
+int SockConnection::receiveBase(void* buffer, int bufferLength, bool shouldFill) {
     const int res = recv(sock.value, (char*) buffer, bufferLength, shouldFill ? MSG_WAITALL : 0);
     if (res == 0) {
-        throw SockGracefulDisconnect(*this);
+        throw SockDisconnect("Remote host disconnected", &recv, 0);
     } else if (res < 0) {
         int err = SockPlatform::get_errno();
         switch (err) {
@@ -43,55 +52,45 @@ int SockConnection::ReceiveBase(void* buffer, int bufferLength, bool shouldFill)
     }
 }
 
-int SockConnection::ReceiveNX(void* buffer, int bufferLength) {
-    try { return ReceiveBase(buffer, bufferLength, true); }
-    catch (const SockGracefulDisconnect& e) {
-        return 0;
-    }
-}
-
-std::string SockConnection::ReceiveString(size_t n) {
+std::string SockConnection::receiveString(size_t n) {
     std::string s;
-    s.reserve(n);
-    constexpr unsigned int buflen = 256 * 1024;
-    char buf[buflen];
-    int rl;
-    for (size_t r = n; r; r -= rl) {
-        rl = Receive(buf, std::min<size_t>(buflen, r));
-        s.append(buf, rl);
+    s.resize(n);
+    for (size_t i = 0; i < n; ) {
+        int res = receiveBase(s.data() + i, s.size() - i, true);
+        i += res;
     }
     return s;
 }
 
-std::string SockConnection::ReceiveString() {
+std::string SockConnection::receiveString() {
     std::string s;
     constexpr unsigned int buflen = 256 * 1024;
     char buf[buflen];
 
     do {
-        int recvlen = ReceiveBase(buf, buflen, false);
+        int recvlen = receiveBase(buf, buflen, false);
         s.append(buf, recvlen);
     } while (HasData());
 
     return s;
 }
 
-std::string SockConnection::ReceiveNX() {
-    try { return ReceiveString(); }
-    catch (const SockGracefulDisconnect&) {
-        return "";
-    }
-}
+// std::string SockConnection::ReceiveNX() {
+//     try { return ReceiveString(); }
+//     catch (const SockGracefulDisconnect&) {
+//         return "";
+//     }
+// }
 
-std::string SockConnection::DisconnectGet() {
-    Disconnect();
-    std::string s, t;
-    do {
-        std::string t = ReceiveNX();
-        s.append(t);
-    } while (!t.empty());
-    return s;
-}
+// std::string SockConnection::DisconnectGet() {
+//     Disconnect();
+//     std::string s, t;
+//     do {
+//         std::string t = ReceiveNX();
+//         s.append(t);
+//     } while (!t.empty());
+//     return s;
+// }
 
 
 bool SockClient::Connect(const char* host, uint16_t port) {
