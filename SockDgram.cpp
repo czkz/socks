@@ -1,10 +1,10 @@
-#include "SocksDgram.h"
+#include "SockDgram.h"
 
 void SockDgram::Send(const std::string& data, const Host& host) {
     if (!host.hostInfo) { return; }
-    int ret = sendto(sockrc->sock, data.data(), data.size(), 0, (const sockaddr*) &host.hostInfo.value(), sizeof(sockaddr_in));
-    if (ret == SOCKET_ERROR) {
-        throw SockError("Sock sendto() error", &sendto, WSAGetLastError());
+    int ret = sendto(sock.value, data.data(), data.size(), 0, (const sockaddr*) &host.hostInfo.value(), sizeof(sockaddr_in));
+    if (ret == -1) {
+        throw SockError("Sock sendto() error", &sendto, SockDefines::get_errno());
     }
 }
 
@@ -14,8 +14,8 @@ void SockDgram::Bind(uint16_t port) {
     hostInfo.sin_addr.s_addr = INADDR_ANY;
     hostInfo.sin_port = htons(port);
 
-    if (bind(sockrc->sock, (sockaddr*) &hostInfo, sizeof hostInfo) == SOCKET_ERROR) {
-		throw SockError("Sock bind() error", &bind, WSAGetLastError());
+    if (bind(sock.value, (sockaddr*) &hostInfo, sizeof hostInfo) == -1) {
+		throw SockError("Sock bind() error", &bind, SockDefines::get_errno());
 	}
 }
 
@@ -24,12 +24,12 @@ Packet SockDgram::Receive() {
 	char buf[buflen];
 
 	sockaddr_in hostInfo;
-	int hostInfoLen = sizeof hostInfo;
+    SockDefines::sockaddr_len_t hostInfoLen = sizeof hostInfo;
 
-	int recvlen = recvfrom(sockrc->sock, buf, buflen, 0, (sockaddr*) &hostInfo, &hostInfoLen);
-	if (recvlen == SOCKET_ERROR) {
-        int err = WSAGetLastError();
-        if (err == WSAECONNRESET) {
+	int recvlen = recvfrom(sock.value, buf, buflen, 0, (sockaddr*) &hostInfo, &hostInfoLen);
+	if (recvlen == -1) {
+        int err = SockDefines::get_errno();
+        if (err == SockDefines::error_codes::econnreset) {
             return Packet{std::nullopt, Host{hostInfo}};
         }
         else {
@@ -43,17 +43,17 @@ Packet SockDgram::Receive() {
 
 void SockDgramConn::Connect(const Host& host) {
     if (!host.hostInfo) { return; }
-    int ret = connect(sockrc->sock, (const sockaddr*) &host.hostInfo.value(), sizeof(host.hostInfo.value()));
-    if (ret == SOCKET_ERROR) {
-        throw SockError("Sock connect() error", &connect, WSAGetLastError());
+    int ret = connect(sock.value, (const sockaddr*) &host.hostInfo.value(), sizeof(host.hostInfo.value()));
+    if (ret == -1) {
+        throw SockError("Sock connect() error", &connect, SockDefines::get_errno());
     }
 }
 
 void SockDgramConn::Send(const std::string& data)
 {
-    int ret = send(sockrc->sock, data.data(), data.size(), 0);
-    if (ret == SOCKET_ERROR) {
-        throw SockError("Sock send() error", &send, WSAGetLastError());
+    int ret = send(sock.value, data.data(), data.size(), 0);
+    if (ret == -1) {
+        throw SockError("Sock send() error", &send, SockDefines::get_errno());
     }
 }
 
@@ -62,10 +62,10 @@ std::optional<std::string> SockDgramConn::Receive()
     constexpr unsigned int buflen = 65536;
 	char buf[buflen];
 
-	int recvlen = recv(sockrc->sock, buf, buflen, 0);
-	if (recvlen == SOCKET_ERROR) {
-        int err = WSAGetLastError();
-        if (err == WSAECONNRESET) {
+	int recvlen = recv(sock.value, buf, buflen, 0);
+	if (recvlen == -1) {
+        int err = SockDefines::get_errno();
+        if (err == SockDefines::error_codes::econnreset) {
             return std::nullopt;
         }
         else {

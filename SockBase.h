@@ -1,51 +1,120 @@
 #pragma once
 #include <string>
 #include <stdexcept>
-#include <winsock2.h>
-#include <ws2tcpip.h>
 #include <memory>
 #include <optional>
 
-class SockBase {
-protected:
-    class SockResource {
-    private:
-        fd_set thisSet;
-    public:
-        SOCKET sock = INVALID_SOCKET;
+#ifdef _WIN32
 
-    public:
-        SockResource(int af, int type, int protocol);
-        ~SockResource();
+// Windows socket includes
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
-        //Disable copy and assignment, only allow move ctor
-        SockResource(const SockResource&) = delete;
-        SockResource& operator=(const SockResource&) = delete;
-        SockResource& operator=(SockResource&&) = delete;
-        SockResource(SockResource&& other) : SockResource(std::move(other.sock)) { }
+#elif __linux__
 
-        explicit SockResource(const SOCKET&) = delete;
-        explicit SockResource(SOCKET&& socket);
+// Unix socket includes
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netdb.h>
 
-        ///Returns whether there's data to read / clients to accept
-        bool Readable();
+#endif
+
+
+#ifdef _WIN32
+
+namespace SockDefines {
+    using socket_t = SOCKET;
+    constexpr socket_t null_socket = INVALID_SOCKET;
+    inline int get_errno() { return errno; }
+    using hostent_t = HOSTENT;
+    using sockaddr_len_t = int;
+
+    enum error_codes {
+        econnrefused = WSAECONNREFUSED,
+        econnreset   = WSAECONNRESET,
+        ehostunreach = WSAEHOSTUNREACH,
+        enetreset    = WSAENETRESET,
+        enetunreach  = WSAENETUNREACH,
+        etimedout    = WSAETIMEDOUT,
+        ewouldblock  = WSAEWOULDBLOCK,
+        no_data      = WSANO_DATA,
     };
-    std::shared_ptr<SockResource> sockrc;
-    SockBase(int af, int type, int protocol) : sockrc(std::make_shared<SockResource>(af, type, protocol)) { }
-    SockBase(SOCKET&& sock) : sockrc(std::make_shared<SockResource>(std::move(sock))) { }
-    SockBase(SockResource&& rc) : SockBase(std::move(rc.sock)) { }
-    SockBase(SockBase&& other) = default;
+}
+
+#elif __linux__
+
+namespace SockDefines {
+    using socket_t = int;
+    constexpr socket_t null_socket = -1;
+    inline int get_errno() { return errno; }
+    using hostent_t = hostent;
+    using sockaddr_len_t = unsigned int;
+
+    enum error_codes {
+        econnrefused = ECONNREFUSED,
+        econnreset   = ECONNRESET,
+        ehostunreach = EHOSTUNREACH,
+        enetreset    = ENETRESET,
+        enetunreach  = ENETUNREACH,
+        etimedout    = ETIMEDOUT,
+        ewouldblock  = EWOULDBLOCK,
+        no_data      = NO_DATA,
+    };
+}
+
+#endif
+
+
+#ifdef _WIN32
+class WSAHandle {
+    WSAHandle() {
+        WSADATA wsadata;
+        if (WSAStartup(0x202, &wsadata)) {
+            throw SockError("Socks WSAStartup() failed", &WSAStartup, WSAGetLastError());
+        }
+    }
+    ~WSAHandle() {
+        WSACleanup();
+    }
+};
+#elif __linux__
+class WSAHandle { };
+#endif
+
+class SockHandle {
+public:
+    SockDefines::socket_t value = SockDefines::null_socket;
+private:
+    fd_set thisSet;
+    WSAHandle wsa_handle;
+public:
+    SockHandle(int af, int type, int protocol);
+    ~SockHandle();
+
+    // No copy, only move
+    SockHandle(const SockHandle&) = delete;
+    SockHandle& operator=(const SockHandle&) = delete;
+    SockHandle(SockHandle&& other);
+    SockHandle& operator=(SockHandle&& other);
+
+    explicit SockHandle(const SockDefines::socket_t&) = delete;
+    explicit SockHandle(SockDefines::socket_t&& socket);
+
+    ///Returns whether there's data to read / clients to accept
+    bool Readable();
 };
 
 
 class SockError : public std::runtime_error {
 public:
-    const int wsaerror;
+    const int error_code;
     const void* const func;
-    template <typename function>
-    explicit SockError(const char* what, function func, int wsaerror)
-        : runtime_error(std::string(what) + " [" + std::to_string(wsaerror) + "]"),
-          wsaerror(WSAGetLastError()),
+    template <typename Func>
+    explicit SockError(const char* what, Func func, int error_code)
+        : runtime_error(std::string(what) + " [" + std::to_string(error_code) + "]"),
+          error_code(SockDefines::get_errno()),
           func((void*)func)
     { }
 };

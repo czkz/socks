@@ -15,11 +15,13 @@ private:
     Packet(std::optional<std::string>&& data, const Host& host) : data(data), host(host) { }
 };
 
-class SockDgram : public SockBase {
+class SockDgram {
+protected:
+    SockHandle sock;
 public:
-    SockDgram() : SockBase(AF_INET, SOCK_DGRAM, IPPROTO_UDP) {}
+    SockDgram() : sock(AF_INET, SOCK_DGRAM, IPPROTO_UDP) {}
     void Bind(uint16_t port);
-    inline bool HasPackets() { return sockrc->Readable(); }
+    inline bool HasPackets() { return sock.Readable(); }
 
     inline void Send(const Packet& packet) { if (packet.data) { return Send(*packet.data, packet.host); } }
     void Send(const std::string& data, const Host& host);

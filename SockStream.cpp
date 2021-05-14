@@ -1,15 +1,21 @@
 #include "SockStream.h"
 
+#ifdef _WIN32
+	void SockStreamBase::Disconnect() const { shutdown(sock.value, SD_SEND); }
+#elif __linux__
+	void SockStreamBase::Disconnect() const { shutdown(sock.value, SHUT_WR); }
+#endif
+
 void SockConnection::Send(const void* data, int dataSize) const {
-	const int res = send(sockrc->sock, (const char*) data, dataSize, 0);
-	if (res == SOCKET_ERROR) {
-		int err = WSAGetLastError();
+	const int res = send(sock.value, (const char*) data, dataSize, 0);
+	if (res == -1) {
+		int err = SockDefines::get_errno();
 		switch (err) {
-		case WSAEWOULDBLOCK:
+        case SockDefines::error_codes::ewouldblock:
 			return;
-		case WSAEHOSTUNREACH:
-		case WSAECONNRESET:
-		case WSAETIMEDOUT:
+        case SockDefines::error_codes::ehostunreach:
+        case SockDefines::error_codes::econnreset:
+        case SockDefines::error_codes::etimedout:
 			throw SockDisconnect(&send, err);
 		default:
 			throw SockError("Sock send() failed", &send, err);
@@ -18,18 +24,18 @@ void SockConnection::Send(const void* data, int dataSize) const {
 }
 
 int SockConnection::ReceiveBase(void* buffer, int bufferLength, bool shouldFill) {
-	const int res = recv(sockrc->sock, (char*) buffer, bufferLength, shouldFill ? MSG_WAITALL : 0);
+	const int res = recv(sock.value, (char*) buffer, bufferLength, shouldFill ? MSG_WAITALL : 0);
 	if (res == 0) {
 		throw SockGracefulDisconnect(*this);
 	}
 	else if (res < 0) {
-		int err = WSAGetLastError();
+		int err = SockDefines::get_errno();
 		switch (err) {
-		case WSAEWOULDBLOCK:
+        case SockDefines::error_codes::ewouldblock:
 			return 0;
-		case WSAENETRESET:
-		case WSAETIMEDOUT:
-		case WSAECONNRESET:
+        case SockDefines::error_codes::enetreset:
+        case SockDefines::error_codes::etimedout:
+        case SockDefines::error_codes::econnreset:
 			throw SockDisconnect(&recv, err);
 		default:
 			throw SockError("Sock recv() failed", &recv, err);
@@ -95,12 +101,12 @@ bool SockClient::Connect(const char* host, uint16_t port) {
     Host m_host {host, port};
 	if (!m_host.hostInfo) { return false; }
 
-	if (connect(sockrc->sock, (sockaddr*) &m_host.hostInfo.value(), sizeof(sockaddr_in)) != 0) {
-		int err = WSAGetLastError();
+	if (connect(sock.value, (sockaddr*) &m_host.hostInfo.value(), sizeof(sockaddr_in)) != 0) {
+		int err = SockDefines::get_errno();
 		switch (err) {
-		case WSAECONNREFUSED:
-		case WSAENETUNREACH:
-		case WSAETIMEDOUT:
+        case SockDefines::error_codes::econnrefused:
+        case SockDefines::error_codes::enetunreach:
+        case SockDefines::error_codes::etimedout:
 			return false;
 		}
 		throw SockError("Sock connect() error", &connect, err);
@@ -115,22 +121,22 @@ void SockServer::Start(uint16_t port, int backlog) {
 	hostInfo.sin_addr.s_addr = INADDR_ANY;
 	hostInfo.sin_port = htons (port);
 
-	if (bind(sockrc->sock, (sockaddr*) &hostInfo, sizeof hostInfo)) {
-		throw SockError("Sock bind() error", &bind, WSAGetLastError());
+	if (bind(sock.value, (sockaddr*) &hostInfo, sizeof hostInfo)) {
+		throw SockError("Sock bind() error", &bind, SockDefines::get_errno());
 	}
-	if (listen(sockrc->sock, backlog)) {
-		throw SockError("Sock listen() error", &listen, WSAGetLastError());
+	if (listen(sock.value, backlog)) {
+		throw SockError("Sock listen() error", &listen, SockDefines::get_errno());
 	}
 }
 
 ConnectedClient SockServer::Accept() {
-	SOCKET client_socket;
+    SockDefines::socket_t client_socket;
 	sockaddr_in clientInfo;
-	int client_addr_size = sizeof(clientInfo);
+	SockDefines::sockaddr_len_t client_addr_size = sizeof(clientInfo);
 
-	client_socket = accept(sockrc->sock, (sockaddr*) &clientInfo, &client_addr_size);
-	if (client_socket == INVALID_SOCKET) {
-		throw SockError("Sock accept() error", &accept, WSAGetLastError());
+	client_socket = accept(sock.value, (sockaddr*) &clientInfo, &client_addr_size);
+	if (client_socket == SockDefines::null_socket) {
+		throw SockError("Sock accept() error", &accept, SockDefines::get_errno());
 	}
 	return ConnectedClient(std::move(client_socket), clientInfo);
 }
