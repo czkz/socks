@@ -27,8 +27,7 @@ int SockConnection::ReceiveBase(void* buffer, int bufferLength, bool shouldFill)
 	const int res = recv(sock.value, (char*) buffer, bufferLength, shouldFill ? MSG_WAITALL : 0);
 	if (res == 0) {
 		throw SockGracefulDisconnect(*this);
-	}
-	else if (res < 0) {
+	} else if (res < 0) {
 		int err = SockDefines::get_errno();
 		switch (err) {
         case SockDefines::error_codes::ewouldblock:
@@ -40,8 +39,7 @@ int SockConnection::ReceiveBase(void* buffer, int bufferLength, bool shouldFill)
 		default:
 			throw SockError("Sock recv() failed", &recv, err);
 		}
-	}
-	else {
+	} else {
 		return res;
 	}
 }

@@ -26,19 +26,11 @@ SockHandle::SockHandle(SockDefines::socket_t&& socket) {
 	FD_ZERO(&thisSet);
 }
 
-#ifdef _WIN32
 SockHandle::~SockHandle() {
 	if (this->value != SockDefines::null_socket) {
-		closesocket(this->value);
+		SockDefines::close_fn(this->value);
 	}
 }
-#elif __linux__
-SockHandle::~SockHandle() {
-	if (this->value != SockDefines::null_socket) {
-		close(this->value);
-	}
-}
-#endif
 
 bool SockHandle::Readable() {
     static constexpr timeval tv = {0, 0};
@@ -46,8 +38,7 @@ bool SockHandle::Readable() {
     int ret = select(0, &thisSet, 0, 0, const_cast<timeval*>(&tv));
     if (ret == SockDefines::null_socket) {
         throw SockError("Socks select() failed", &select, SockDefines::get_errno());
-    }
-    else {
+    } else {
         return ret;
     }
 }
@@ -56,9 +47,11 @@ bool SockHandle::Readable() {
 
 std::string Host::GetHostname() const {
     if (!hostInfo) { return ""; }
-    SockDefines::hostent_t* hst = gethostbyaddr ((const char*) &hostInfo->sin_addr.s_addr, 4, AF_INET);
+    SockDefines::hostent_t* hst = gethostbyaddr ((const char*) &hostInfo->sin_addr.s_addr,
+                                                 4, AF_INET);
     if (hst == nullptr) {
-        throw SockError("Sock Host gethostbyaddr() error", &gethostbyaddr, SockDefines::get_errno());
+        throw SockError("Sock Host gethostbyaddr() error",
+                        &gethostbyaddr, SockDefines::get_errno());
     }
     return hst->h_name;
 }
@@ -74,9 +67,9 @@ Host::Host(std::optional<sockaddr_in>&& hostInfo) noexcept
       port(hostInfo ? ntohs(hostInfo->sin_port) : 0) { }
 
 Host::Host(const char* host, uint16_t port)
-    : Host(GetSockaddr(host, port)) { }
+    : Host(getSockaddr(host, port)) { }
 
-std::optional<sockaddr_in> Host::GetSockaddr(const char* host, uint16_t port) {
+std::optional<sockaddr_in> Host::getSockaddr(const char* host, uint16_t port) {
     sockaddr_in hostInfo;
     hostInfo.sin_family = AF_INET;
     hostInfo.sin_port = htons(port);
@@ -84,16 +77,17 @@ std::optional<sockaddr_in> Host::GetSockaddr(const char* host, uint16_t port) {
     unsigned long asIP = inet_addr (host);
     if (asIP != INADDR_NONE) {
         hostInfo.sin_addr.s_addr = asIP;
-    }
-    else {
+    } else {
         SockDefines::hostent_t* h;
         h = gethostbyname(host);
-        if (!h) {
+        if (h == nullptr) {
             int err = SockDefines::get_errno();
-            if (err == SockDefines::error_codes::no_data) { return std::nullopt; }
-            else { throw SockError("Sock failed to interpret host address", &gethostbyname, err); }
-        }
-        else {
+            if (err == SockDefines::error_codes::no_data) {
+                return std::nullopt;
+            } else {
+                throw SockError("Sock failed to interpret host address", &gethostbyname, err);
+            }
+        } else {
             hostInfo.sin_addr.s_addr = **((unsigned long**) h->h_addr_list);
         }
     }
