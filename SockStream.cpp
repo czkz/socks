@@ -1,10 +1,8 @@
 #include "SockStream.h"
 
-#ifdef _WIN32
-    void SockStreamBase::Disconnect() const { shutdown(sock.value, SD_SEND); }
-#elif __linux__
-    void SockStreamBase::Disconnect() const { shutdown(sock.value, SHUT_WR); }
-#endif
+void SockStreamBase::Disconnect() const {
+    shutdown(sock.value, SockDefines::shutdown_how::read);
+}
 
 void SockConnection::Send(const void* data, int dataSize) const {
     const int res = send(sock.value, (const char*) data, dataSize, 0);

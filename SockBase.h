@@ -28,6 +28,12 @@ namespace SockDefines {
         ewouldblock  = WSAEWOULDBLOCK,
         no_data      = WSANO_DATA,
     };
+
+    enum shutdown_how {
+        read  = SD_RECEIVE,
+        write = SD_SEND,
+        both  = SD_BOTH,
+    };
 }
 
 class WSAHandle {
@@ -68,6 +74,12 @@ namespace SockDefines {
         etimedout    = ETIMEDOUT,
         ewouldblock  = EWOULDBLOCK,
         no_data      = NO_DATA,
+    };
+
+    enum shutdown_how {
+        read  = SHUT_RD,
+        write = SHUT_WR,
+        both  = SHUT_RDWR,
     };
 }
 
