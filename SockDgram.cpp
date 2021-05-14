@@ -15,19 +15,19 @@ void SockDgram::Bind(uint16_t port) {
     hostInfo.sin_port = htons(port);
 
     if (bind(sock.value, (sockaddr*) &hostInfo, sizeof hostInfo) == -1) {
-		throw SockError("Sock bind() error", &bind, SockDefines::get_errno());
-	}
+        throw SockError("Sock bind() error", &bind, SockDefines::get_errno());
+    }
 }
 
 Packet SockDgram::Receive() {
-	constexpr unsigned int buflen = 65536;
-	char buf[buflen];
+    constexpr unsigned int buflen = 65536;
+    char buf[buflen];
 
-	sockaddr_in hostInfo;
+    sockaddr_in hostInfo;
     SockDefines::sockaddr_len_t hostInfoLen = sizeof hostInfo;
 
-	int recvlen = recvfrom(sock.value, buf, buflen, 0, (sockaddr*) &hostInfo, &hostInfoLen);
-	if (recvlen == -1) {
+    int recvlen = recvfrom(sock.value, buf, buflen, 0, (sockaddr*) &hostInfo, &hostInfoLen);
+    if (recvlen == -1) {
         int err = SockDefines::get_errno();
         if (err == SockDefines::error_codes::econnreset) {
             return Packet{std::nullopt, Host{hostInfo}};
@@ -37,7 +37,7 @@ Packet SockDgram::Receive() {
         }
     }
 
-	return Packet{std::string{buf, (std::string::size_type) recvlen}, Host{hostInfo}};
+    return Packet{std::string{buf, (std::string::size_type) recvlen}, Host{hostInfo}};
 }
 
 
@@ -60,10 +60,10 @@ void SockDgramConn::Send(const std::string& data)
 std::optional<std::string> SockDgramConn::Receive()
 {
     constexpr unsigned int buflen = 65536;
-	char buf[buflen];
+    char buf[buflen];
 
-	int recvlen = recv(sock.value, buf, buflen, 0);
-	if (recvlen == -1) {
+    int recvlen = recv(sock.value, buf, buflen, 0);
+    if (recvlen == -1) {
         int err = SockDefines::get_errno();
         if (err == SockDefines::error_codes::econnreset) {
             return std::nullopt;
@@ -73,6 +73,6 @@ std::optional<std::string> SockDgramConn::Receive()
         }
     }
 
-	return std::string{buf, (std::string::size_type) recvlen};
+    return std::string{buf, (std::string::size_type) recvlen};
 }
 

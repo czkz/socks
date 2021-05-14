@@ -13,28 +13,28 @@ SockHandle& SockHandle::operator=(SockHandle&& other) {
 }
 
 SockHandle::SockHandle(int af, int type, int protocol) {
-	this->value = socket(af, type, protocol);
-	if (this->value == SockDefines::null_socket) {
-		throw SockError("Socks socket() failed", &socket, SockDefines::get_errno());
-	}
-	FD_ZERO(&thisSet);
+    this->value = socket(af, type, protocol);
+    if (this->value == SockDefines::null_socket) {
+        throw SockError("Socks socket() failed", &socket, SockDefines::get_errno());
+    }
+    FD_ZERO(&thisSet);
 }
 
 SockHandle::SockHandle(SockDefines::socket_t&& socket) {
-	this->value = socket;
-	socket = SockDefines::null_socket;
-	FD_ZERO(&thisSet);
+    this->value = socket;
+    socket = SockDefines::null_socket;
+    FD_ZERO(&thisSet);
 }
 
 SockHandle::~SockHandle() {
-	if (this->value != SockDefines::null_socket) {
-		SockDefines::close_fn(this->value);
-	}
+    if (this->value != SockDefines::null_socket) {
+        SockDefines::close_fn(this->value);
+    }
 }
 
 bool SockHandle::Readable() {
     static constexpr timeval tv = {0, 0};
-	FD_SET(this->value, &thisSet);
+    FD_SET(this->value, &thisSet);
     int ret = select(0, &thisSet, 0, 0, const_cast<timeval*>(&tv));
     if (ret == SockDefines::null_socket) {
         throw SockError("Socks select() failed", &select, SockDefines::get_errno());
