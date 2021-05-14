@@ -1,6 +1,8 @@
 #pragma once
 #include <optional>
-#include "SockBase.h"
+#include <string>
+#include "SockHandle.h"
+#include "Host.h"
 
 struct Packet {
     Packet(const std::string& data, const Host& host) : data(std::make_optional<std::string>(data)), host(host) { }

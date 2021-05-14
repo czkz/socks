@@ -1,5 +1,8 @@
 #pragma once
-#include "SockBase.h"
+#include <string>
+#include "SockHandle.h"
+#include "Host.h"
+#include "SockError.h"
 
 
 class SockStreamBase {
@@ -81,8 +84,8 @@ public:
 
 class SockDisconnect : public SockError {
 public:
-    template <typename function>
-    explicit SockDisconnect(function func, int wsaerror) : SockError("Lost connection to remote host", func, wsaerror) { }
+    template <typename Func>
+    explicit SockDisconnect(Func func, int wsaerror) : SockError("Lost connection to remote host", func, wsaerror) { }
 protected:
     using SockError::SockError;
 };

@@ -1,4 +1,5 @@
 #include "SockDgram.h"
+#include "SockError.h"
 
 void SockDgram::Send(const std::string& data, const Host& host) {
     if (!host.hostInfo) { return; }

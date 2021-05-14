@@ -1,4 +1,5 @@
 #include "SockStream.h"
+#include "SockPlatform.h"
 
 void SockStreamBase::Disconnect() const {
     shutdown(sock.value, SockPlatform::shutdown_how::read);

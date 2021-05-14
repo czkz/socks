@@ -1,3 +1,4 @@
+#pragma once
 
 #ifdef _WIN32
 //////////////////////////////////////////// Windows specific code /////
@@ -10,7 +11,7 @@ namespace SockPlatform {
     inline int get_errno() { return errno; }
     using hostent_t = HOSTENT;
     using sockaddr_len_t = int;
-    static constexpr auto close_fn = &closesocket;
+    constexpr auto close_fn = &closesocket;
 
     enum error_codes {
         econnrefused = WSAECONNREFUSED,
@@ -31,6 +32,7 @@ namespace SockPlatform {
 }
 
 class WSAHandle {
+public:
     WSAHandle() {
         WSADATA wsadata;
         if (WSAStartup(0x202, &wsadata)) {
@@ -58,7 +60,7 @@ namespace SockPlatform {
     inline int get_errno() { return errno; }
     using hostent_t = hostent;
     using sockaddr_len_t = unsigned int;
-    static constexpr auto close_fn = &close;
+    constexpr auto close_fn = &close;
 
     enum error_codes {
         econnrefused = ECONNREFUSED,
