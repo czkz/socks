@@ -25,7 +25,7 @@ void serverThread() try {
     ConnectedClient sc = server.Accept();
 
     dp(sc.HasData());
-    dp(sc.Receive());
+    dp(sc.ReceiveAvailable());
     sleep(100);
 
     dp(sc.HasData());

@@ -1,11 +1,11 @@
 #include "SockStream.h"
 #include "SockPlatform.h"
 
-void SockStreamBase::Disconnect() const {
+void SockStreamBase::Disconnect() {
     shutdown(sock.value, SockPlatform::shutdown_how::read);
 }
 
-void SockConnection::Send(const void* data, int dataSize) const {
+void SockConnection::Send(const void* data, int dataSize) {
     const int res = send(sock.value, (const char*) data, dataSize, 0);
     if (res == -1) {
         int err = SockPlatform::get_errno();
@@ -23,8 +23,8 @@ void SockConnection::Send(const void* data, int dataSize) const {
 }
 
 
-// int SockConnection::Receive(void* buffer, int bufferLength) {
-//     int ret = ReceiveBase(buffer, bufferLength, true);
+// int SockConnection::ReceiveInto(void* buffer, int bufferLength) {
+//     int ret = receiveBase(buffer, bufferLength, true);
 //     if (ret == -1) {
 //         throw SockDisconnect("Remote host disconnected", &recv, 0);
 //     }
@@ -62,7 +62,7 @@ std::string SockConnection::receiveString(size_t n) {
     return s;
 }
 
-std::string SockConnection::receiveString() {
+std::string SockConnection::receiveAvailable() {
     std::string s;
     constexpr unsigned int buflen = 256 * 1024;
     char buf[buflen];
@@ -73,7 +73,7 @@ std::string SockConnection::receiveString() {
             s.append(buf, recvlen);
         } while (HasData());
     } catch (const SockDisconnect& e) {
-        // receiveString() receives an undetermined amount
+        // receiveAvailable() receives an undetermined amount
         // of data, so it makes sense to postpone not only
         // FIN packets but all disconnect exceptions
         if (s.empty()) {
@@ -84,19 +84,12 @@ std::string SockConnection::receiveString() {
     return s;
 }
 
-// std::string SockConnection::ReceiveNX() {
-//     try { return ReceiveString(); }
-//     catch (const SockGracefulDisconnect&) {
-//         return "";
-//     }
-// }
-
 std::string SockConnection::DisconnectGet() {
     Disconnect();
     std::string ret;
     try {
         while (true) {
-            ret += Receive();
+            ret += receiveAvailable();
         }
     } catch (const SockDisconnect& e) {
         // DisconnectGet() is expected to return all data
