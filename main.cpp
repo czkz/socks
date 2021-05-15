@@ -1,28 +1,49 @@
 #include <iostream>
 #include <thread>
 #include "SockStream.h"
+#include "../cp/dbg.h"
 
-void clientThread() {
+void sleep(int ms) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
+
+void clientThread() try {
     SockClient client;
     client.Connect("127.0.0.1", 5555);
     client.Send("Hello");
-    // std::string s = client.Receive();
-    // std::cout << "Got from server: " << s << '\n';
+    client.Disconnect();
+} catch (const std::exception& e) {
+    std::cout << "Caught: " << e.what();
 }
 
-void serverThread() {
+void serverThread() try {
     SockServer server;
     server.Start(5555);
-    ConnectedClient client = server.Accept();
-    std::cout << "Got from client: " << client.Receive(6) << '\n';
-    // client.Send("World");
+    dp(server.HasClients());
+    sleep(200);
+    dp(server.HasClients());
+    ConnectedClient sc = server.Accept();
+
+    dp(sc.HasData());
+    dp(sc.Receive());
+    sleep(100);
+
+    dp(sc.HasData());
+    dp(sc.DisconnectGet());
+    sleep(100);
+
+} catch (const std::exception& e) {
+    std::cout << "Caught: " << e.what();
 }
 
-int main() {
+int main() try {
     auto t1 = std::thread(serverThread);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    sleep(100);
     auto t2 = std::thread(clientThread);
 
     t1.join();
     t2.join();
+
+} catch (const std::exception& e) {
+    std::cout << "Caught: " << e.what();
 }

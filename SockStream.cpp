@@ -67,10 +67,19 @@ std::string SockConnection::receiveString() {
     constexpr unsigned int buflen = 256 * 1024;
     char buf[buflen];
 
-    do {
-        int recvlen = receiveBase(buf, buflen, false);
-        s.append(buf, recvlen);
-    } while (HasData());
+    try {
+        do {
+            int recvlen = receiveBase(buf, buflen, false);
+            s.append(buf, recvlen);
+        } while (HasData());
+    } catch (const SockDisconnect& e) {
+        // receiveString() receives an undetermined amount
+        // of data, so it makes sense to postpone not only
+        // FIN packets but all disconnect exceptions
+        if (s.empty()) {
+            throw;
+        }
+    }
 
     return s;
 }
@@ -82,22 +91,33 @@ std::string SockConnection::receiveString() {
 //     }
 // }
 
-// std::string SockConnection::DisconnectGet() {
-//     Disconnect();
-//     std::string s, t;
-//     do {
-//         std::string t = ReceiveNX();
-//         s.append(t);
-//     } while (!t.empty());
-//     return s;
-// }
+std::string SockConnection::DisconnectGet() {
+    Disconnect();
+    std::string ret;
+    try {
+        while (true) {
+            ret += Receive();
+        }
+    } catch (const SockDisconnect& e) {
+        // DisconnectGet() is expected to return all data
+        // that was sent, so we can't ignore a disconnect
+        // exception unless it's a FIN packet
+        if (e.error_code != 0) {
+            throw;
+        }
+    }
+    return ret;
+}
 
 
 bool SockClient::Connect(const char* host, uint16_t port) {
     Host m_host {host, port};
     if (!m_host.hostInfo) { return false; }
 
-    if (connect(sock.value, (sockaddr*) &m_host.hostInfo.value(), sizeof(sockaddr_in)) != 0) {
+    if (-1 == connect(sock.value,
+                      (sockaddr*) &m_host.hostInfo.value(),
+                      sizeof(sockaddr_in))
+    ) {
         int err = SockPlatform::get_errno();
         switch (err) {
         case SockPlatform::error_codes::econnrefused:
@@ -115,7 +135,7 @@ void SockServer::Start(uint16_t port, int backlog) {
     sockaddr_in hostInfo;
     hostInfo.sin_family = AF_INET;
     hostInfo.sin_addr.s_addr = INADDR_ANY;
-    hostInfo.sin_port = htons (port);
+    hostInfo.sin_port = htons(port);
 
     if (bind(sock.value, (sockaddr*) &hostInfo, sizeof hostInfo)) {
         throw SockError("Sock bind() error", &bind, SockPlatform::get_errno());

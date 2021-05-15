@@ -52,7 +52,7 @@ public:
     // std::string ReceiveNX();
 
     ///Disconnect and receive remaining data
-    // std::string DisconnectGet();
+    std::string DisconnectGet();
 
     inline bool HasData() { return sock.Readable(); }
 };
@@ -84,8 +84,7 @@ public:
 
 class SockDisconnect : public SockError {
 public:
+    using SockError::SockError;
     template <typename Func>
     explicit SockDisconnect(Func func, int wsaerror) : SockError("Lost connection to remote host", func, wsaerror) { }
-protected:
-    using SockError::SockError;
 };

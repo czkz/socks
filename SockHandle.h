@@ -5,7 +5,6 @@ class SockHandle {
 public:
     SockPlatform::socket_t value = SockPlatform::null_socket;
 private:
-    fd_set thisSet;
     WSAHandle wsa_handle;
 public:
     SockHandle(int af, int type, int protocol);

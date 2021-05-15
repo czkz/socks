@@ -18,13 +18,11 @@ SockHandle::SockHandle(int af, int type, int protocol) {
     if (this->value == SockPlatform::null_socket) {
         throw SockError("Socks socket() failed", &socket, SockPlatform::get_errno());
     }
-    FD_ZERO(&thisSet);
 }
 
 SockHandle::SockHandle(SockPlatform::socket_t&& socket) {
     this->value = socket;
     socket = SockPlatform::null_socket;
-    FD_ZERO(&thisSet);
 }
 
 SockHandle::~SockHandle() {
@@ -34,10 +32,12 @@ SockHandle::~SockHandle() {
 }
 
 bool SockHandle::Readable() {
-    static constexpr timeval tv = {0, 0};
+    fd_set thisSet;
+    FD_ZERO(&thisSet);
     FD_SET(this->value, &thisSet);
-    int ret = select(0, &thisSet, 0, 0, const_cast<timeval*>(&tv));
-    if (ret == SockPlatform::null_socket) {
+    timeval tv = {0, 0};
+    int ret = select(this->value + 1, &thisSet, 0, 0, &tv);
+    if (ret == -1) {
         throw SockError("Socks select() failed", &select, SockPlatform::get_errno());
     } else {
         return ret;
