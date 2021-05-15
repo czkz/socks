@@ -84,15 +84,14 @@ std::string SockConnection::receiveAvailable() {
     return s;
 }
 
-std::string SockConnection::DisconnectGet() {
-    Disconnect();
+std::string SockConnection::receiveUntilFIN() {
     std::string ret;
     try {
         while (true) {
             ret += receiveAvailable();
         }
     } catch (const SockDisconnect& e) {
-        // DisconnectGet() is expected to return all data
+        // receiveUntilFIN() is expected to return all data
         // that was sent, so we can't ignore a disconnect
         // exception unless it's a FIN packet
         if (e.error_code != 0) {
@@ -138,7 +137,7 @@ void SockServer::Start(uint16_t port, int backlog) {
     }
 }
 
-ConnectedClient SockServer::Accept() {
+ClientConnection SockServer::Accept() {
     SockPlatform::socket_t client_socket;
     sockaddr_in clientInfo;
     SockPlatform::sockaddr_len_t client_addr_size = sizeof(clientInfo);
@@ -147,5 +146,5 @@ ConnectedClient SockServer::Accept() {
     if (client_socket == SockPlatform::null_socket) {
         throw SockError("Sock accept() error", &accept, SockPlatform::get_errno());
     }
-    return ConnectedClient(std::move(client_socket), clientInfo);
+    return ClientConnection(std::move(client_socket), clientInfo);
 }

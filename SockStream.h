@@ -29,6 +29,7 @@ protected:
     /// @param n Amount of bytes to receive
     std::string receiveString(size_t);
     std::string receiveAvailable();
+    std::string receiveUntilFIN();
 
 public:
     void Send(const void* data, int dataLength);
@@ -39,9 +40,8 @@ public:
 
     inline std::string ReceiveAvailable() { return receiveAvailable(); }
     inline std::string ReceiveFill(size_t n) { return receiveString(n); }
-
-    /// Disconnect and receive remaining data
-    std::string DisconnectGet();
+    /// Receive until a FIN packet
+    inline std::string ReceiveAll() { return receiveUntilFIN(); }
 
     inline bool HasData() { return sock.Readable(); }
 };
@@ -53,11 +53,11 @@ public:
 };
 
 
-class ConnectedClient : public SockConnection {
+class ClientConnection : public SockConnection {
 public:
     Host host;
 protected:
-    ConnectedClient(SockPlatform::socket_t&& in_sock, const sockaddr_in& clientHostInfo)
+    ClientConnection(SockPlatform::socket_t&& in_sock, const sockaddr_in& clientHostInfo)
         : SockConnection(std::move(in_sock)), host(clientHostInfo) { }
     friend class SockServer;
 };
@@ -66,7 +66,7 @@ class SockServer : public SockStreamBase {
 public:
     /// @param backlog Max length of the pending connections queue
     void Start(uint16_t port, int backlog = 256);
-    ConnectedClient Accept();
+    ClientConnection Accept();
     inline bool HasClients() { return sock.Readable(); }
 };
 
