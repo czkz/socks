@@ -12,30 +12,38 @@ void sleep(int ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 std::set<ClientConnection> clients;
 std::mutex clients_mutex;
 
-void onReceived(std::string data) {
+using set_it = decltype(clients)::iterator;
+
+void onReceived(std::string data, set_it who) {
     std::lock_guard l { clients_mutex };
-    for (const auto& e : clients) {
+    for (auto it = clients.begin(); it != clients.end(); ++it) {
+        if (it == who) { continue; }
         try {
-            e.Send(data);
+            it->Send(data);
         } catch (const SockError& err) {
-            clients.erase(e);
             std::cout << err.what() << std::endl;
         }
     }
 }
 
-void clientThreadFunc(const ClientConnection& sock) try {
+void clientThreadFunc(const set_it it) try {
+    const ClientConnection& sock = *it;
     while (true) {
-        onReceived(sock.ReceiveAvailable());
+        onReceived(sock.ReceiveAvailable(), it);
     }
-} catch (const SockError& e) { }
+} catch (const SockError& e) {
+    std::lock_guard l { clients_mutex };
+    clients.erase(it);
+}
 
 int main() {
     SockServer server;
     server.Start(5555);
 
     while (true) {
-        const auto it = clients.emplace(server.Accept()).first;
-        std::thread(clientThreadFunc, std::ref(*it)).detach();
+        auto c = server.Accept();
+        std::lock_guard l { clients_mutex };
+        const auto it = clients.insert(std::move(c)).first;
+        std::thread(clientThreadFunc, std::move(it)).detach();
     }
 }

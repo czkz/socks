@@ -40,6 +40,7 @@ public:
     inline void Send(const Container& c) const { Send(std::data(c), std::size(c)); }
 
 
+    void ReceiveInto(void* buffer, size_t bufferLength);
     inline std::string ReceiveAvailable() const { return receiveAvailable(); }
     inline std::string ReceiveFill(size_t n) const { return receiveString(n); }
     /// Receive until a FIN packet

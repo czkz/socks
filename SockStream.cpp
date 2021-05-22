@@ -23,13 +23,12 @@ void SockConnection::Send(const void* data, int dataSize) const {
 }
 
 
-// int SockConnection::ReceiveInto(void* buffer, int bufferLength) {
-//     int ret = receiveBase(buffer, bufferLength, true);
-//     if (ret == -1) {
-//         throw SockDisconnect("Remote host disconnected", &recv, 0);
-//     }
-//     return ret;
-// }
+void SockConnection::ReceiveInto(void* buffer, size_t bufferLength) {
+    for (size_t i = 0; i < bufferLength; ) {
+        int res = receiveBase((char*) buffer + i, bufferLength - i, true);
+        i += res;
+    }
+}
 
 int SockConnection::receiveBase(void* buffer, int bufferLength, bool shouldFill) const {
     const int res = recv(sock.value, (char*) buffer, bufferLength, shouldFill ? MSG_WAITALL : 0);
