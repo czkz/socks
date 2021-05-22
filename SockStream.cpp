@@ -1,11 +1,11 @@
 #include "SockStream.h"
 #include "SockPlatform.h"
 
-void SockStreamBase::Disconnect() {
+void SockStreamBase::Disconnect() const {
     shutdown(sock.value, SockPlatform::shutdown_how::read);
 }
 
-void SockConnection::Send(const void* data, int dataSize) {
+void SockConnection::Send(const void* data, int dataSize) const {
     const int res = send(sock.value, (const char*) data, dataSize, 0);
     if (res == -1) {
         int err = SockPlatform::get_errno();
@@ -31,7 +31,7 @@ void SockConnection::Send(const void* data, int dataSize) {
 //     return ret;
 // }
 
-int SockConnection::receiveBase(void* buffer, int bufferLength, bool shouldFill) {
+int SockConnection::receiveBase(void* buffer, int bufferLength, bool shouldFill) const {
     const int res = recv(sock.value, (char*) buffer, bufferLength, shouldFill ? MSG_WAITALL : 0);
     if (res == 0) {
         throw SockDisconnect("Remote host disconnected", &recv, 0);
@@ -52,7 +52,7 @@ int SockConnection::receiveBase(void* buffer, int bufferLength, bool shouldFill)
     }
 }
 
-std::string SockConnection::receiveString(size_t n) {
+std::string SockConnection::receiveString(size_t n) const {
     std::string s;
     s.resize(n);
     for (size_t i = 0; i < n; ) {
@@ -62,7 +62,7 @@ std::string SockConnection::receiveString(size_t n) {
     return s;
 }
 
-std::string SockConnection::receiveAvailable() {
+std::string SockConnection::receiveAvailable() const {
     std::string s;
     constexpr unsigned int buflen = 256 * 1024;
     char buf[buflen];
@@ -84,7 +84,7 @@ std::string SockConnection::receiveAvailable() {
     return s;
 }
 
-std::string SockConnection::receiveUntilFIN() {
+std::string SockConnection::receiveUntilFIN() const {
     std::string ret;
     try {
         while (true) {
@@ -102,7 +102,7 @@ std::string SockConnection::receiveUntilFIN() {
 }
 
 
-bool SockClient::Connect(const char* host, uint16_t port) {
+bool SockClient::Connect(const char* host, uint16_t port) const {
     Host m_host {host, port};
     if (!m_host.hostInfo) { return false; }
 
@@ -123,7 +123,7 @@ bool SockClient::Connect(const char* host, uint16_t port) {
 }
 
 
-void SockServer::Start(uint16_t port, int backlog) {
+void SockServer::Start(uint16_t port, int backlog) const {
     sockaddr_in hostInfo;
     hostInfo.sin_family = AF_INET;
     hostInfo.sin_addr.s_addr = INADDR_ANY;
@@ -137,7 +137,7 @@ void SockServer::Start(uint16_t port, int backlog) {
     }
 }
 
-ClientConnection SockServer::Accept() {
+ClientConnection SockServer::Accept() const {
     SockPlatform::socket_t client_socket;
     sockaddr_in clientInfo;
     SockPlatform::sockaddr_len_t client_addr_size = sizeof(clientInfo);

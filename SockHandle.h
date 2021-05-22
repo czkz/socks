@@ -20,6 +20,8 @@ public:
     explicit SockHandle(SockPlatform::socket_t&& socket);
 
     ///Returns whether there's data to read / clients to accept
-    bool Readable();
+    bool Readable() const;
+
+    friend bool operator<(const SockHandle& a, const SockHandle& b);
 };
 

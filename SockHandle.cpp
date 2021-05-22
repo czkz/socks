@@ -31,7 +31,7 @@ SockHandle::~SockHandle() {
     }
 }
 
-bool SockHandle::Readable() {
+bool SockHandle::Readable() const {
     fd_set thisSet;
     FD_ZERO(&thisSet);
     FD_SET(this->value, &thisSet);
@@ -42,4 +42,8 @@ bool SockHandle::Readable() {
     } else {
         return ret;
     }
+}
+
+bool operator<(const SockHandle& a, const SockHandle& b) {
+    return a.value < b.value;
 }

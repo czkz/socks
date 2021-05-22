@@ -33,15 +33,8 @@ namespace SockPlatform {
 
 class WSAHandle {
 public:
-    WSAHandle() {
-        WSADATA wsadata;
-        if (WSAStartup(0x202, &wsadata)) {
-            throw SockError("Socks WSAStartup() failed", &WSAStartup, WSAGetLastError());
-        }
-    }
-    ~WSAHandle() {
-        WSACleanup();
-    }
+    WSAHandle();
+    ~WSAHandle();
 };
 
 #elif __unix__
